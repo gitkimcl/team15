@@ -18,8 +18,8 @@ import requests
 
 WORD_LENGTH = 5
 LETTERS = string.ascii_lowercase
-DEFAULT_SOLVER_SCRIPT = os.path.join(os.path.dirname(__file__), "team00.py")
-DEFAULT_PROBLEMS_PATH = os.path.join(os.path.dirname(__file__), "team00_problem.json")
+DEFAULT_SOLVER_SCRIPT = os.path.join(os.path.dirname(__file__), "team15.py")
+DEFAULT_PROBLEMS_PATH = os.path.join(os.path.dirname(__file__), "team15_problem.json")
 
 
 def compute_feedback(secret, guess):
