@@ -129,8 +129,10 @@ def make_noise_events(seed, problem, max_turns, p, q, force_noise_turns):
     rng = make_problem_rng(seed, problem["problem_id"])
     secret = problem["secret_word"]
     schedule = [choose_noise_kind(rng, p, q) for _ in range(max_turns)]
+    """
     if force_noise_turns > 0 and not any(schedule[:force_noise_turns]):
         schedule[rng.randrange(force_noise_turns)] = choose_forced_noise_kind(rng, p, q)
+    """
 
     events = []
     for kind in schedule:
@@ -296,8 +298,8 @@ def build_parser():
     parser.add_argument("--solver-script", default=DEFAULT_SOLVER_SCRIPT)
     parser.add_argument("--problems-path", default=DEFAULT_PROBLEMS_PATH)
     parser.add_argument("--num-problems", type=int, default=1)
-    parser.add_argument("--noise-probability", type=float, default=0.33)
-    parser.add_argument("--two-letter-noise-probability", type=float, default=0.33)
+    parser.add_argument("--noise-probability", type=float, default=0.00)
+    parser.add_argument("--two-letter-noise-probability", type=float, default=0.00)
     parser.add_argument("--force-noise-turns", type=int, default=3)
     parser.add_argument("--max-turns", type=int, default=100)
     parser.add_argument("--wrong-submit-penalty", type=int, default=100)
