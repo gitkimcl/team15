@@ -76,7 +76,7 @@ def calc_noise_1(word, guess, parsed):
             ccnt += 25 - len(char_in_guess)
             if collision: ccnt += 1
         wordl[i] = word[i]
-    return ccnt / 5*25
+    return ccnt / (5*25)
 
 def calc_noise_2(word, guess, parsed):
     wordl = list(word)
@@ -100,7 +100,7 @@ def calc_noise_2(word, guess, parsed):
                 ccnt += collision
             wordl[i] = word[i]
             wordl[j] = word[j]
-    return ccnt / 10*25*25
+    return ccnt / (10*25*25)
 
 def calc_probability(noise, word, guess, parsed):
     return noise[0] * calc_noise_0(word, guess, parsed) + \
@@ -158,8 +158,9 @@ class Solver:
         elif len(state["probability"]) == 0:
             # ???
             pass
-
-        guess = next(iter(state["probability"])) if state["probability"] else state["candidates"][0]
+        
+        if not state["probability"]: guess = state["candidates"][0] # ???
+        else: guess = sorted(state["probability"].items(), key=lambda e: -e[1])[0][0]
         state["guesses"].append(guess)
         return {"action": "guess", "word": guess}
 
