@@ -160,7 +160,38 @@ class Solver:
             pass
         
         if not state["probability"]: guess = state["candidates"][0] # ???
-        else: guess = sorted(state["probability"].items(), key=lambda e: -e[1])[0][0]
+        else: 
+            #정답 후보 선정
+            p = 0.9 * max(state["probability"].items(), key=lambda e: e[1])[1]#가장 확률이 높은 단어에 대해 이 비율 이상이면 후보로 모음.
+            guess_candidates = []
+            for word in sorted(state["probability"].items(), key=lambda e: -e[1]):
+                if word[1] > p:
+                    guess_candidates.append(word[0])
+                else: break
+                #정답 후보 간 차이 추출
+            best_word = guess_candidates[0]
+            if len(guess_candidates) != 1:
+                best_word = guess_candidates[0]
+                alphabet = {chr(i):0 for i in range(97, 123)}
+                for word in guess_candidates:
+                    #비슷하다면 다른 알파벳을 추가
+                    q = 2
+                    for idx in range(5):
+                        if q and word[idx] != best_word[idx]:
+                            q -= 1
+                    if q:
+                        for idx in range(5):
+                            if word[idx] != best_word[idx]:
+                                alphabet[word[idx]] += 1
+                #단어 선정
+                #단어의 알파벳을 set으로 나타내서 alphabet[각 요소] 의 합이 가장 높은 단어 선정
+                best_word_score = 0
+                for word in state["candidates"]: #전체 단어로 변경
+                    word_score = sum(alphabet[i] for i in set(list(word)))
+                    if word_score > best_word_score:
+                        best_word = word
+                        best_word_score = word_score
+            guess = best_word
         state["guesses"].append(guess)
         return {"action": "guess", "word": guess}
 
