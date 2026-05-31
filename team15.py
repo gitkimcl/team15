@@ -107,6 +107,96 @@ def calc_probability(noise, word, guess, parsed):
         noise[1] * calc_noise_1(word, guess, parsed) + \
         noise[2] * calc_noise_2(word, guess, parsed)
 
+
+def special_turn_1(state, last_guess, parsed):
+    print("guess #1")
+    p_noise_0 = { k: calc_noise_0(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_1 = { k: calc_noise_1(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_2 = { k: calc_noise_2(k, last_guess, parsed) for k in state["candidates"] }
+
+    state["multi_probability"][1][0][0] = {
+        k: v * p_noise_0[k]
+        for k, v in state["multi_probability"][0][0][0].items()
+    }
+    state["multi_probability"][2][0][0] = {
+        k: v * p_noise_1[k]
+        for k, v in state["multi_probability"][0][0][0].items()
+    }
+    state["multi_probability"][3][0][0] = {
+        k: v * p_noise_2[k]
+        for k, v in state["multi_probability"][0][0][0].items()
+    }
+    p = state["noise"][:]
+    r = 0 if (state["noise"][1] == state["noise"][2] == 0) else (state["noise"][2])/(state["noise"][1]+state["noise"][2])
+    p1 = (1-r) * p[0] / 3
+    p2 = r * p[0] / 3
+    p[0] *= 2/3
+    p[1] += p1; p[2] += p2
+    state["probability"] = {
+        k: sum(p[i] * state["multi_probability"][i+1][0][0][k] for i in range(3)) for k in state["probability"]
+    }
+
+def special_turn_2(state, last_guess, parsed):
+    print("guess #2")
+    p_noise_0 = { k: calc_noise_0(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_1 = { k: calc_noise_1(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_2 = { k: calc_noise_2(k, last_guess, parsed) for k in state["candidates"] }
+
+    for i in range(1, 4):
+        state["multi_probability"][i][1][0] = {
+            k: v * p_noise_0[k]
+            for k, v in state["multi_probability"][i][0][0].items()
+        }
+        state["multi_probability"][i][2][0] = {
+            k: v * p_noise_1[k]
+            for k, v in state["multi_probability"][i][0][0].items()
+        }
+        state["multi_probability"][i][3][0] = {
+            k: v * p_noise_2[k]
+            for k, v in state["multi_probability"][i][0][0].items()
+        }
+    p = [[state["noise"][i]*state["noise"][j] for j in range(3)] for i in range(3)]
+    r = 0 if (state["noise"][1] == state["noise"][2] == 0) else (state["noise"][2])/(state["noise"][1]+state["noise"][2])
+    p1 = (1-r) * p[0][0] / 3
+    p2 = r * p[0][0] / 3
+    p[0][0] *= 1/3
+    p[1][0] += p1; p[0][1] += p1
+    p[2][0] += p2; p[0][2] += p2
+    state["probability"] = {
+        k: sum(p[i][j] * state["multi_probability"][i+1][j+1][0][k] for i in range(3) for j in range(3)) for k in state["probability"]
+    }
+
+def special_turn_3(state, last_guess, parsed):
+    print("guess #3")
+    p_noise_0 = { k: calc_noise_0(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_1 = { k: calc_noise_1(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_2 = { k: calc_noise_2(k, last_guess, parsed) for k in state["candidates"] }
+
+    for i in range(1, 4):
+        for j in range(1, 4):
+            state["multi_probability"][i][j][1] = {
+                k: v * p_noise_0[k]
+                for k, v in state["multi_probability"][i][j][0].items()
+            }
+            state["multi_probability"][i][j][2] = {
+                k: v * p_noise_1[k]
+                for k, v in state["multi_probability"][i][j][0].items()
+            }
+            state["multi_probability"][i][j][3] = {
+                k: v * p_noise_2[k]
+                for k, v in state["multi_probability"][i][j][0].items()
+            }
+    p = [[[state["noise"][i]*state["noise"][j]*state["noise"][k] for k in range(3)] for j in range(3)] for i in range(3)]
+    r = 0 if (state["noise"][1] == state["noise"][2] == 0) else (state["noise"][2])/(state["noise"][1]+state["noise"][2])
+    p1 = (1-r) * p[0][0][0] / 3
+    p2 = r * p[0][0][0] / 3
+    p[1][0][0] += p1; p[0][1][0] += p1; p[0][0][1] += p1
+    p[2][0][0] += p2; p[0][2][0] += p2; p[0][0][2] += p2
+    p[0][0][0] = 0
+    state["probability"] = {
+        k: sum(p[i][j][l] * state["multi_probability"][i+1][j+1][l+1][k] for i in range(3) for j in range(3) for l in range(3)) for k in state["probability"]
+    }
+
 class Solver:
     """Stores per-problem state and chooses the next action."""
 
@@ -120,9 +210,11 @@ class Solver:
         self.problems[data["problem_id"]] = {
             "candidates": candidates,
             "noise": [1-data["noise_probability"]-data["two_letter_noise_probability"], data["noise_probability"], data["two_letter_noise_probability"]],
+            "multi_probability": [[[{} for _ in range(4)] for _ in range(4)] for _ in range(4)],
             "probability": {k: 1/n for k in candidates},
             "guesses": [],
         }
+        self.problems[data["problem_id"]]["multi_probability"][0][0][0] = {k: 1/n for k in candidates}
 
     def act(self, data):
         """Update state from the latest feedback and return guess/submit."""
@@ -137,10 +229,15 @@ class Solver:
                     print(f"{k}: {v:.4f} | ", end='')
                 print(f"\nguess result: {last_guess} -> {parsed}")
 
-                state["probability"] = {
-                    k: v * calc_probability(state["noise"], k, last_guess, parsed)
-                    for k, v in state["probability"].items()
-                }
+                if len(state["guesses"]) == 1: special_turn_1(state, last_guess, parsed)
+                elif len(state["guesses"]) == 2: special_turn_2(state, last_guess, parsed)
+                elif len(state["guesses"]) == 3: special_turn_3(state, last_guess, parsed)
+                else:
+                    state["probability"] = {
+                        k: v * calc_probability(state["noise"], k, last_guess, parsed)
+                        for k, v in state["probability"].items()
+                    }
+                
                 psum = sum(state["probability"].values())
                 state["probability"] = {
                     k: v / psum
