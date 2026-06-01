@@ -61,8 +61,7 @@ def calc_noise_0(word, guess, parsed):
 def calc_noise_1(word, guess, parsed):
     wordl = list(word)
     ccnt = 0
-    char_in_guess = set()
-    for e in guess: char_in_guess.add(e)
+    char_in_guess = set(guess)
     for i in range(5):
         collision = False
         for e in char_in_guess:
@@ -71,7 +70,7 @@ def calc_noise_1(word, guess, parsed):
                 continue
             wordl[i] = e
             if compute_feedback("".join(wordl), guess) == parsed: ccnt += 1
-        wordl[i] = '*'
+        wordl[i] = '~'
         if compute_feedback("".join(wordl), guess) == parsed:
             ccnt += 25 - len(char_in_guess)
             if collision: ccnt += 1
@@ -81,8 +80,7 @@ def calc_noise_1(word, guess, parsed):
 def calc_noise_2(word, guess, parsed):
     wordl = list(word)
     ccnt = 0
-    char_in_guess = set()
-    for e in guess: char_in_guess.add(e)
+    char_in_guess = set(guess)
     for i in range(5):
         for j in range(i+1, 5):
             collision = 0
@@ -94,7 +92,7 @@ def calc_noise_2(word, guess, parsed):
                     wordl[i] = e
                     wordl[j] = ee
                     if (compute_feedback("".join(wordl), guess)) == parsed: ccnt += 1
-            wordl[i] = wordl[j] = '*'
+            wordl[i] = wordl[j] = '~'
             if compute_feedback("".join(wordl), guess) == parsed:
                 ccnt += (25 - len(char_in_guess)) * (25 - len(char_in_guess))
                 ccnt += collision
@@ -127,9 +125,8 @@ def special_turn_1(state, last_guess, parsed):
         for k, v in state["multi_probability"][0][0][0].items()
     }
     p = state["noise"][:]
-    r = 0 if (state["noise"][1] == state["noise"][2] == 0) else (state["noise"][2])/(state["noise"][1]+state["noise"][2])
-    p1 = (1-r) * p[0] / 3
-    p2 = r * p[0] / 3
+    p1 = (1-state["force_noise"]) * p[0] / 3
+    p2 = state["force_noise"] * p[0] / 3
     p[0] *= 2/3
     p[1] += p1; p[2] += p2
     state["probability"] = {
@@ -156,9 +153,8 @@ def special_turn_2(state, last_guess, parsed):
             for k, v in state["multi_probability"][i][0][0].items()
         }
     p = [[state["noise"][i]*state["noise"][j] for j in range(3)] for i in range(3)]
-    r = 0 if (state["noise"][1] == state["noise"][2] == 0) else (state["noise"][2])/(state["noise"][1]+state["noise"][2])
-    p1 = (1-r) * p[0][0] / 3
-    p2 = r * p[0][0] / 3
+    p1 = (1-state["force_noise"]) * p[0][0] / 3
+    p2 = state["force_noise"] * p[0][0] / 3
     p[0][0] *= 1/3
     p[1][0] += p1; p[0][1] += p1
     p[2][0] += p2; p[0][2] += p2
@@ -187,15 +183,17 @@ def special_turn_3(state, last_guess, parsed):
                 for k, v in state["multi_probability"][i][j][0].items()
             }
     p = [[[state["noise"][i]*state["noise"][j]*state["noise"][k] for k in range(3)] for j in range(3)] for i in range(3)]
-    r = 0 if (state["noise"][1] == state["noise"][2] == 0) else (state["noise"][2])/(state["noise"][1]+state["noise"][2])
-    p1 = (1-r) * p[0][0][0] / 3
-    p2 = r * p[0][0][0] / 3
+    p1 = (1-state["force_noise"]) * p[0][0][0] / 3
+    p2 = state["force_noise"] * p[0][0][0] / 3
     p[1][0][0] += p1; p[0][1][0] += p1; p[0][0][1] += p1
     p[2][0][0] += p2; p[0][2][0] += p2; p[0][0][2] += p2
     p[0][0][0] = 0
     state["probability"] = {
         k: sum(p[i][j][l] * state["multi_probability"][i+1][j+1][l+1][k] for i in range(3) for j in range(3) for l in range(3)) for k in state["probability"]
     }
+
+    del state["multi_probability"]
+    del state["force_noise"]
 
 class Solver:
     """Stores per-problem state and chooses the next action."""
@@ -206,14 +204,16 @@ class Solver:
     def start_problem(self, data):
         """Initialize state for a new problem."""
         candidates = list(data["candidate_words"])
-        n = len(candidates)
         self.problems[data["problem_id"]] = {
             "candidates": candidates,
             "noise": [1-data["noise_probability"]-data["two_letter_noise_probability"], data["noise_probability"], data["two_letter_noise_probability"]],
+            "force_noise": 0 if (data["noise_probability"] == data["two_letter_noise_probability"] == 0) else (data["two_letter_noise_probability"])/(data["noise_probability"]+data["two_letter_noise_probability"]),
             "multi_probability": [[[{} for _ in range(4)] for _ in range(4)] for _ in range(4)],
-            "probability": {k: 1/n for k in candidates},
+            "probability": {},
             "guesses": [],
         }
+        n = len(candidates)
+        self.problems[data["problem_id"]]["probability"] = {k: 1/n for k in candidates}
         self.problems[data["problem_id"]]["multi_probability"][0][0][0] = {k: 1/n for k in candidates}
 
     def act(self, data):
@@ -223,11 +223,6 @@ class Solver:
             parsed = parse_feedback(data.get("feedback"))
             if parsed is not None:
                 last_guess = state["guesses"][-1]
-
-                print(f"probability before: ({len(state["probability"])} possible)")
-                for k, v in sorted(state["probability"].items(), key=lambda e: -e[1])[:10]:
-                    print(f"{k}: {v:.4f} | ", end='')
-                print(f"\nguess result: {last_guess} -> {parsed}")
 
                 if len(state["guesses"]) == 1: special_turn_1(state, last_guess, parsed)
                 elif len(state["guesses"]) == 2: special_turn_2(state, last_guess, parsed)
@@ -245,49 +240,47 @@ class Solver:
                     if v > 1e-10 # 에이 설마
                 }
 
+                print(f"guess: {last_guess} -> {parsed}")
                 print(f"probability after: ({len(state["probability"])} possible)")
                 for k, v in sorted(state["probability"].items(), key=lambda e: -e[1])[:10]:
                     print(f"{k}: {v:.4f} | ", end='')
                 print()
 
-        if len(state["probability"]) == 1 or (1 - max(state["probability"].items(), key=lambda e: e[1])[1]) < 1e-5:
-            return {"action": "submit", "word": max(state["probability"].items(), key=lambda e: e[1])[0]}
-        elif len(state["probability"]) == 0:
-            # ???
-            pass
+        if len(state["probability"]) == 0:
+            return {"action": "submit", "word": "sad"} # ???
         
-        if not state["probability"]: guess = state["candidates"][0] # ???
-        else: 
-            #정답 후보 선정
-            p = 0.9 * max(state["probability"].items(), key=lambda e: e[1])[1]#가장 확률이 높은 단어에 대해 이 비율 이상이면 후보로 모음.
-            guess_candidates = []
-            for word in sorted(state["probability"].items(), key=lambda e: -e[1]):
-                if word[1] > p:
-                    guess_candidates.append(word[0])
-                else: break
-            #정답 후보 간 차이 추출
-            best_word = guess_candidates[0]
-            if len(guess_candidates) != 1:
-                alphabet = {chr(i):0 for i in range(97, 123)}
-                for word in guess_candidates:
-                    #비슷하다면 다른 알파벳을 추가
-                    q = 2
+        p_sorted = sorted(state["probability"].items(), key=lambda e: -e[1])
+        p_max = p_sorted[0]
+
+        if len(state["probability"]) == 1 or (1 - p_max[1]) < 1e-5:
+            return {"action": "submit", "word": p_max[0]}
+        
+        # 정답 후보 선정
+        p = 0.9 * p_max[1] # 가장 확률이 높은 단어에 대해 이 비율 이상이면 후보로 모음.
+        guess_candidates = []
+        for word in p_sorted:
+            if word[1] > p:
+                guess_candidates.append(word[0])
+            else: break
+        # 정답 후보 간 차이 추출
+        best_word = p_max[0]
+        if len(guess_candidates) != 1:
+            alphabet = {chr(i):0 for i in range(97, 123)}
+            for word in guess_candidates:
+                # 비슷하다면 다른 알파벳을 추가
+                q = 2
+                for idx in range(5):
+                    if q and word[idx] != best_word[idx]:
+                        q -= 1
+                if q:
                     for idx in range(5):
-                        if q and word[idx] != best_word[idx]:
-                            q -= 1
-                    if q:
-                        for idx in range(5):
-                            if word[idx] != best_word[idx]:
-                                alphabet[word[idx]] += 1
-                #단어 선정
-                #단어의 알파벳을 set으로 나타내서 alphabet[각 요소] 의 합이 가장 높은 단어 선정
-                best_word_score = 0
-                for word in state["candidates"]: #전체 단어로 변경
-                    word_score = sum(alphabet[i] for i in set(list(word)))
-                    if word_score > best_word_score:
-                        best_word = word
-                        best_word_score = word_score
-            guess = best_word
+                        if word[idx] != best_word[idx]:
+                            alphabet[word[idx]] += 1
+            # 단어 선정
+            # 단어의 알파벳을 set으로 나타내서 alphabet[각 요소] 의 합이 가장 높은 단어 선정
+            # 이미 정답이 아님이 판명 난 단어도 선정될 수 있음
+            best_word = max(state["candidates"], key=lambda e: (sum(alphabet[i] for i in set(e)), state["probability"][e] if e in state["probability"] else 0))
+        guess = best_word
         state["guesses"].append(guess)
         return {"action": "guess", "word": guess}
 
