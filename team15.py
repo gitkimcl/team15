@@ -250,8 +250,8 @@ class Solver:
                     print(f"{k}: {v:.4f} | ", end='')
                 print()
 
-        if len(state["probability"]) == 1:
-            return {"action": "submit", "word": next(iter(state["probability"]))}
+        if len(state["probability"]) == 1 or (1 - max(state["probability"].items(), key=lambda e: e[1])[1]) < 1e-5:
+            return {"action": "submit", "word": max(state["probability"].items(), key=lambda e: e[1])[0]}
         elif len(state["probability"]) == 0:
             # ???
             pass
@@ -265,10 +265,9 @@ class Solver:
                 if word[1] > p:
                     guess_candidates.append(word[0])
                 else: break
-                #정답 후보 간 차이 추출
+            #정답 후보 간 차이 추출
             best_word = guess_candidates[0]
             if len(guess_candidates) != 1:
-                best_word = guess_candidates[0]
                 alphabet = {chr(i):0 for i in range(97, 123)}
                 for word in guess_candidates:
                     #비슷하다면 다른 알파벳을 추가

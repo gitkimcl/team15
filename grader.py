@@ -19,7 +19,7 @@ import requests
 WORD_LENGTH = 5
 LETTERS = string.ascii_lowercase
 DEFAULT_SOLVER_SCRIPT = os.path.join(os.path.dirname(__file__), "team15.py")
-DEFAULT_PROBLEMS_PATH = os.path.join(os.path.dirname(__file__), "problem1.json")
+DEFAULT_PROBLEMS_PATH = os.path.join(os.path.dirname(__file__), "team15_problem_list.json")
 
 
 def compute_feedback(secret, guess):
@@ -295,7 +295,7 @@ def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--solver-script", default=DEFAULT_SOLVER_SCRIPT)
     parser.add_argument("--problems-path", default=DEFAULT_PROBLEMS_PATH)
-    parser.add_argument("--num-problems", type=int, default=1)
+    parser.add_argument("--num-problems", type=int, default=100)
     parser.add_argument("--noise-probability", type=float, default=0.05)
     parser.add_argument("--two-letter-noise-probability", type=float, default=0.05)
     parser.add_argument("--force-noise-turns", type=int, default=3)
