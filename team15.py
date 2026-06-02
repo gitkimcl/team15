@@ -8,6 +8,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import numpy as np
 
 def compute_feedback(secret, guess):
     """Return Wordle feedback as a string over 0, 1, 2."""
@@ -108,89 +109,80 @@ def calc_probability(noise, word, guess, parsed):
 
 def special_turn_1(state, last_guess, parsed):
     print("guess #1")
-    p_noise_0 = { k: calc_noise_0(k, last_guess, parsed) for k in state["candidates"] }
-    p_noise_1 = { k: calc_noise_1(k, last_guess, parsed) for k in state["candidates"] }
-    p_noise_2 = { k: calc_noise_2(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_0 = [
+        calc_noise_0(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise_1 = [
+        calc_noise_1(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise_2 = [
+        calc_noise_2(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise = np.array([p_noise_0, p_noise_1, p_noise_2], np.float32)
 
-    state["multi_probability"][1][0][0] = {
-        k: v * p_noise_0[k]
-        for k, v in state["multi_probability"][0][0][0].items()
-    }
-    state["multi_probability"][2][0][0] = {
-        k: v * p_noise_1[k]
-        for k, v in state["multi_probability"][0][0][0].items()
-    }
-    state["multi_probability"][3][0][0] = {
-        k: v * p_noise_2[k]
-        for k, v in state["multi_probability"][0][0][0].items()
-    }
+    state["multi_probability"] = p_noise * state["multi_probability"]
+
     p = state["noise"][:]
     p1 = (1-state["force_noise"]) * p[0] / 3
     p2 = state["force_noise"] * p[0] / 3
     p[0] *= 2/3
     p[1] += p1; p[2] += p2
-    state["probability"] = {
-        k: sum(p[i] * state["multi_probability"][i+1][0][0][k] for i in range(3)) for k in state["probability"]
-    }
+    state["probability"] = np.sum(state["multi_probability"], axis=0)
 
 def special_turn_2(state, last_guess, parsed):
     print("guess #2")
-    p_noise_0 = { k: calc_noise_0(k, last_guess, parsed) for k in state["candidates"] }
-    p_noise_1 = { k: calc_noise_1(k, last_guess, parsed) for k in state["candidates"] }
-    p_noise_2 = { k: calc_noise_2(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_0 = [
+        calc_noise_0(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise_1 = [
+        calc_noise_1(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise_2 = [
+        calc_noise_2(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise = np.array([p_noise_0, p_noise_1, p_noise_2], np.float32)
 
-    for i in range(1, 4):
-        state["multi_probability"][i][1][0] = {
-            k: v * p_noise_0[k]
-            for k, v in state["multi_probability"][i][0][0].items()
-        }
-        state["multi_probability"][i][2][0] = {
-            k: v * p_noise_1[k]
-            for k, v in state["multi_probability"][i][0][0].items()
-        }
-        state["multi_probability"][i][3][0] = {
-            k: v * p_noise_2[k]
-            for k, v in state["multi_probability"][i][0][0].items()
-        }
+    state["multi_probability"] = p_noise[None, :, :] * state["multi_probability"][:, None, :]
+
     p = [[state["noise"][i]*state["noise"][j] for j in range(3)] for i in range(3)]
     p1 = (1-state["force_noise"]) * p[0][0] / 3
     p2 = state["force_noise"] * p[0][0] / 3
     p[0][0] *= 1/3
     p[1][0] += p1; p[0][1] += p1
     p[2][0] += p2; p[0][2] += p2
-    state["probability"] = {
-        k: sum(p[i][j] * state["multi_probability"][i+1][j+1][0][k] for i in range(3) for j in range(3)) for k in state["probability"]
-    }
+    state["probability"] = np.sum(state["multi_probability"], axis=(0,1))
 
 def special_turn_3(state, last_guess, parsed):
     print("guess #3")
-    p_noise_0 = { k: calc_noise_0(k, last_guess, parsed) for k in state["candidates"] }
-    p_noise_1 = { k: calc_noise_1(k, last_guess, parsed) for k in state["candidates"] }
-    p_noise_2 = { k: calc_noise_2(k, last_guess, parsed) for k in state["candidates"] }
+    p_noise_0 = [
+        calc_noise_0(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise_1 = [
+        calc_noise_1(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise_2 = [
+        calc_noise_2(state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+        for i in range(len(state["candidates"]))
+    ]
+    p_noise = np.array([p_noise_0, p_noise_1, p_noise_2], np.float32)
 
-    for i in range(1, 4):
-        for j in range(1, 4):
-            state["multi_probability"][i][j][1] = {
-                k: v * p_noise_0[k]
-                for k, v in state["multi_probability"][i][j][0].items()
-            }
-            state["multi_probability"][i][j][2] = {
-                k: v * p_noise_1[k]
-                for k, v in state["multi_probability"][i][j][0].items()
-            }
-            state["multi_probability"][i][j][3] = {
-                k: v * p_noise_2[k]
-                for k, v in state["multi_probability"][i][j][0].items()
-            }
+    state["multi_probability"] = p_noise[None, None, :, :] * state["multi_probability"][:, :, None, :]
+
     p = [[[state["noise"][i]*state["noise"][j]*state["noise"][k] for k in range(3)] for j in range(3)] for i in range(3)]
     p1 = (1-state["force_noise"]) * p[0][0][0] / 3
     p2 = state["force_noise"] * p[0][0][0] / 3
     p[1][0][0] += p1; p[0][1][0] += p1; p[0][0][1] += p1
     p[2][0][0] += p2; p[0][2][0] += p2; p[0][0][2] += p2
     p[0][0][0] = 0
-    state["probability"] = {
-        k: sum(p[i][j][l] * state["multi_probability"][i+1][j+1][l+1][k] for i in range(3) for j in range(3) for l in range(3)) for k in state["probability"]
-    }
+    state["probability"] = np.sum(state["multi_probability"], axis=(0,1,2))
 
     del state["multi_probability"]
     del state["force_noise"]
@@ -204,17 +196,15 @@ class Solver:
     def start_problem(self, data):
         """Initialize state for a new problem."""
         candidates = list(data["candidate_words"])
+        n = len(candidates)
         self.problems[data["problem_id"]] = {
             "candidates": candidates,
             "noise": [1-data["noise_probability"]-data["two_letter_noise_probability"], data["noise_probability"], data["two_letter_noise_probability"]],
             "force_noise": 0 if (data["noise_probability"] == data["two_letter_noise_probability"] == 0) else (data["two_letter_noise_probability"])/(data["noise_probability"]+data["two_letter_noise_probability"]),
-            "multi_probability": [[[{} for _ in range(4)] for _ in range(4)] for _ in range(4)],
-            "probability": {},
+            "multi_probability": np.full((n,), 1/n, np.float32),
+            "probability": np.full((n,), 1/n, np.float32),
             "guesses": [],
         }
-        n = len(candidates)
-        self.problems[data["problem_id"]]["probability"] = {k: 1/n for k in candidates}
-        self.problems[data["problem_id"]]["multi_probability"][0][0][0] = {k: 1/n for k in candidates}
 
     def act(self, data):
         """Update state from the latest feedback and return guess/submit."""
@@ -228,42 +218,40 @@ class Solver:
                 elif len(state["guesses"]) == 2: special_turn_2(state, last_guess, parsed)
                 elif len(state["guesses"]) == 3: special_turn_3(state, last_guess, parsed)
                 else:
-                    state["probability"] = {
-                        k: v * calc_probability(state["noise"], k, last_guess, parsed)
-                        for k, v in state["probability"].items()
-                    }
+                    p = [
+                        calc_probability(state["noise"], state["candidates"][i], last_guess, parsed) if state["probability"][i] != 0 else 0
+                        for i in range(len(state["candidates"]))
+                    ]
+                    state["probability"] *= p
                 
-                psum = sum(state["probability"].values())
-                state["probability"] = {
-                    k: v / psum
-                    for k, v in state["probability"].items()
-                    if v > 1e-10 # 에이 설마
-                }
+                psum = sum(state["probability"])
+                if psum != 0: state["probability"] /= psum
 
                 print(f"guess: {last_guess} -> {parsed}")
-                print(f"probability after: ({len(state["probability"])} possible)")
-                for k, v in sorted(state["probability"].items(), key=lambda e: -e[1])[:10]:
-                    print(f"{k}: {v:.4f} | ", end='')
+                print(f"probability: ({np.count_nonzero(state["probability"])} possible)")
+                for i in np.argsort(-state["probability"], kind='stable')[:10]:
+                    if state["probability"][i] == 0: break
+                    print(f"{state["candidates"][i]}: {state["probability"][i]:.4f} | ", end='')
                 print()
 
-        if len(state["probability"]) == 0:
-            return {"action": "submit", "word": "sad"} # ???
-        
-        p_sorted = sorted(state["probability"].items(), key=lambda e: -e[1])
+        p_sorted = np.argsort(-state["probability"], kind='stable')
         p_max = p_sorted[0]
 
-        if len(state["probability"]) == 1 or (1 - p_max[1]) < 1e-5:
-            return {"action": "submit", "word": p_max[0]}
+        if state["probability"][p_max] == 0:
+            return {"action": "submit", "word": "sad"} # ???
+
+        if (1 - state["probability"][p_max]) < 1e-5:
+            return {"action": "submit", "word": state["candidates"][p_max]}
         
         # 정답 후보 선정
-        p = 0.9 * p_max[1] # 가장 확률이 높은 단어에 대해 이 비율 이상이면 후보로 모음.
+        p = 0.9 * state["probability"][p_max] # 가장 확률이 높은 단어에 대해 이 비율 이상이면 후보로 모음.
         guess_candidates = []
         for word in p_sorted:
-            if word[1] > p:
-                guess_candidates.append(word[0])
+            if state["probability"][word] > p:
+                guess_candidates.append(state["candidates"][word])
             else: break
         # 정답 후보 간 차이 추출
-        best_word = p_max[0]
+        best_word = state["candidates"][p_max]
         if len(guess_candidates) != 1:
             alphabet = {chr(i):0 for i in range(97, 123)}
             for word in guess_candidates:
@@ -279,7 +267,12 @@ class Solver:
             # 단어 선정
             # 단어의 알파벳을 set으로 나타내서 alphabet[각 요소] 의 합이 가장 높은 단어 선정
             # 이미 정답이 아님이 판명 난 단어도 선정될 수 있음
-            best_word = max(state["candidates"], key=lambda e: (sum(alphabet[i] for i in set(e)), state["probability"][e] if e in state["probability"] else 0))
+            best_score = 0
+            for e in p_sorted:
+                score = sum(alphabet[ee] for ee in set(state["candidates"][e]))
+                if best_score < score:
+                    best_score = score
+                    best_word = state["candidates"][e]
         guess = best_word
         state["guesses"].append(guess)
         return {"action": "guess", "word": guess}
