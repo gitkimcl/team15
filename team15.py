@@ -237,8 +237,10 @@ class Solver:
             if parsed is not None:
                 last_guess = state["guesses"][-1]
 
+                """
                 print(f"guess #{len(state["guesses"])}")
                 print(f"guess: {last_guess} -> {parsed}")
+                """
                 
                 if len(state["guesses"]) == 1: force_noise_turn(1, state, last_guess, parsed)
                 elif len(state["guesses"]) == 2: force_noise_turn(2, state, last_guess, parsed)
@@ -254,11 +256,13 @@ class Solver:
                 psum = sum(state["probability"])
                 if psum != 0: state["probability"] /= psum
 
+                """
                 print(f"probability: ({np.count_nonzero(state["probability"])} possible)")
                 for i in np.argsort(-state["probability"], kind='stable')[:10]:
                     if state["probability"][i] == 0: break
                     print(f"{state["candidates"][i]}: {state["probability"][i]:.4f} | ", end='')
                 print()
+                """
 
         p_sorted = np.argsort(-state["probability"], kind='stable')
         p_max = p_sorted[0]

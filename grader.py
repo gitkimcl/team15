@@ -185,7 +185,6 @@ def result(problem, status, turns, score_turns, history, **extra):
         "history": history,
     }
     out.update(extra)
-    print(f"{problem["problem_id"]} done")
     return out
 
 
@@ -301,8 +300,8 @@ def build_parser():
     parser.add_argument("--solver-script", default=DEFAULT_SOLVER_SCRIPT)
     parser.add_argument("--problems-path", default=DEFAULT_PROBLEMS_PATH)
     parser.add_argument("--num-problems", type=int, default=100)
-    parser.add_argument("--noise-probability", type=float, default=0.66)
-    parser.add_argument("--two-letter-noise-probability", type=float, default=0.33)
+    parser.add_argument("--noise-probability", type=float, default=0.00)
+    parser.add_argument("--two-letter-noise-probability", type=float, default=0.00)
     parser.add_argument("--force-noise-turns", type=int, default=3)
     parser.add_argument("--max-turns", type=int, default=100)
     parser.add_argument("--wrong-submit-penalty", type=int, default=100)
