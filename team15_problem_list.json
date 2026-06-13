@@ -22,5 +22,11 @@
     "candidate_words": [
       "eeeea","eeeeb","eeeec","eeeed","eeeee","eeeef","eeeeg","eeeeh","eeeei","eeeej","eeeek","eeeel","eeeem","eeeen","eeeeo","eeeep","eeeeq","eeeer","eeees","eeeet","eeeeu","eeeev","eeeew","eeeex","eeeey","eeeez","abcde","fghij","klmno","pqrst","uvwxy"
     ]
+  },
+  {
+    "secret_word": "zills",
+    "candidate_words": [
+      "bills", "cills", "dills", "fills", "gills", "hills", "jills", "kills", "lills", "mills", "nills", "pills", "rills", "sills", "tills", "vills", "wills", "yills", "zills", "byrls", "compt", "jongs", "vozhd", "wakfs"
+    ]
   }
 ]
