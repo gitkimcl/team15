@@ -112,21 +112,35 @@ def calc_probability_noise_2(word, guess, parsed):
     char_in_guess = set(guess)
     # word의 글자 두 개를 바꿔 생길 수 있는 모든 경우 확인
     # 최적화를 위해, guess에 없는 글자로 바뀌는 경우는 하나로 묶어 처리함
+    collisions = [1 if word[i] in char_in_guess else 0 for i in range(5)]
     for i in range(5):
         for j in range(i+1, 5):
-            collision = 0
+            word_noise[i] = word_noise[j] = 26
+            tests.append(word_noise[:])
+            weights.append((25 - len(char_in_guess) + collisions[i]) * (25 - len(char_in_guess) + collisions[j]))
+
             for e in char_in_guess:
+                if e == word[j]: continue
+                word_noise[j] = e
+                tests.append(word_noise[:])
+                weights.append(25 - len(char_in_guess) + collisions[i])
+
+            word_noise[j] = 26
+            for e in char_in_guess:
+                if e == word[i]: continue
+                word_noise[i] = e
+                tests.append(word_noise[:])
+                weights.append(25 - len(char_in_guess) + collisions[j])
+
+            for e in char_in_guess:
+                if e == word[i]: continue
                 for ee in char_in_guess:
-                    if e == word[i] or ee == word[j]:
-                        collision += 1
-                        continue
+                    if ee == word[j]: continue
                     word_noise[i] = e
                     word_noise[j] = ee
                     tests.append(word_noise[:])
                     weights.append(1)
-            word_noise[i] = word_noise[j] = 26
-            tests.append(word_noise[:])
-            weights.append((25 - len(char_in_guess)) * (25 - len(char_in_guess)) + collision)
+
             word_noise[i] = word[i]
             word_noise[j] = word[j]
     return batch_compute_feedback(
@@ -252,7 +266,7 @@ class Solver:
         if state["probability"][p_max] == 0:
             return {"action": "submit", "word": "sad"} # :(
 
-        if (1 - state["probability"][p_max]) < 5e-5: # 0.005%의 확률로 틀린다면 죽어야지 뭐
+        if (1 - state["probability"][p_max]) < 1e-2: # 1%...?
             return {"action": "submit", "word": state["candidates"][p_max]}
 
         # 단어 선정 알고리즘 개선 시도

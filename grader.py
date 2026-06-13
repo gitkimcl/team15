@@ -21,6 +21,7 @@ LETTERS = string.ascii_lowercase
 DEFAULT_SOLVER_SCRIPT = os.path.join(os.path.dirname(__file__), "team15.py")
 DEFAULT_PROBLEMS_PATH = os.path.join(os.path.dirname(__file__), "team15_problem_list.json")
 
+max_time = 0
 
 def compute_feedback(secret, guess):
     """Return Wordle feedback as a string over 0, 1, 2."""
@@ -184,6 +185,7 @@ def result(problem, status, turns, score_turns, history, **extra):
         "history": history,
     }
     out.update(extra)
+    print(f"{problem["problem_id"]} done")
     return out
 
 
@@ -244,6 +246,9 @@ def run_problem(base_url, problem, args):
 
         if action == "submit":
             if word == problem["secret_word"]:
+                global max_time
+                if args.guess_time_budget - guess_time_left > max_time:
+                    max_time = args.guess_time_budget - guess_time_left
                 return result(problem, "solved", turn, turn, history, submitted=word)
             return result(
                 problem,
@@ -296,7 +301,7 @@ def build_parser():
     parser.add_argument("--solver-script", default=DEFAULT_SOLVER_SCRIPT)
     parser.add_argument("--problems-path", default=DEFAULT_PROBLEMS_PATH)
     parser.add_argument("--num-problems", type=int, default=100)
-    parser.add_argument("--noise-probability", type=float, default=0.33)
+    parser.add_argument("--noise-probability", type=float, default=0.66)
     parser.add_argument("--two-letter-noise-probability", type=float, default=0.33)
     parser.add_argument("--force-noise-turns", type=int, default=3)
     parser.add_argument("--max-turns", type=int, default=100)
@@ -317,6 +322,9 @@ def main():
     solved = sum(1 for item in results if item["status"] == "solved")
     avg_score = sum(item["score_turns"] for item in results) / len(results)
     print(json.dumps({"solved": solved, "average_score_turns": avg_score, "results": results}, indent=2))
+    print(solved)
+    print(avg_score)
+    print(max_time)
 
 
 if __name__ == "__main__":
