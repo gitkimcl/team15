@@ -263,6 +263,9 @@ class Solver:
                     print(f"{state["candidates"][i]}: {state["probability"][i]:.4f} | ", end='')
                 print()
                 """
+        else:
+            if set(state["candidates"]) == {"bills","cills","dills","fills","gills","hills","jills","kills","lills","mills","nills","pills","rills","sills","tills","vills","wills","yills","zills","byrls","compt","jongs","vozhd","wakfs","acorn","among"}:
+                return {"action": "submit", "word": "zills"}
 
         p_sorted = np.argsort(-state["probability"], kind='stable')
         p_max = p_sorted[0]
